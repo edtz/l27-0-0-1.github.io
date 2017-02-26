@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>​</title>
+        <link
+            rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.8.0/xterm.min.css"
+            integrity="sha256-bgRwtv9MeamGN10jO8V9TkZb+q5yGF8v+VODrcj8leI="
+            crossorigin="anonymous"
+        />
+    </head>
+
+    <body style="background-color: black">
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.8.0/xterm.min.js"
+            integrity="sha256-EY+Acmpw5/eBjdTdLJEfjNG7yU1z6XvMSp6JxjQwOa0="
+            crossorigin="anonymous"
+        ></script>
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.8.0/addons/fit/fit.min.js"
+            integrity="sha256-Vvl5QLKP5SDSGRRpXYjWYeNYZTrCgpoAX6Ug0oDAGGM="
+            crossorigin="anonymous"
+        ></script>
+        <script src="/v86/libv86.js" async></script>
+        <script>
+            Terminal.applyAddon(fit);
+            const term = new Terminal({
+                cursorStyle: "block",
+            });
+            term.open(document.querySelector("body"));
+            term.fit();
+
+            const writePrompt = () => term.write("\r\n> ");
+
+            let command = "";
+            const handleKey = (_, { key }) => {
+                if (key === "Enter") {
+                    if (command) {
+                        term.write("\r\n");
+                        run(command);
+                        command = "";
+                    }
+                    writePrompt();
+                    return;
+                }
+                if (key === "Backspace" && command.length > 0) {
+                    term.write("\b \b");
+                    command = command.substring(0, command.length - 1);
+                }
+                if (key.length === 1) {
+                    command = command + key;
+                    term.write(key);
+                }
+            };
+            // ಠ_ಠ that's cheating tho
+            const rules = [
+                {
+                    test: command =>
+                        command.startsWith("cd") ||
+                        command.startsWith("mkdir") ||
+                        command.startsWith("sudo") ||
+                        command.startsWith("su"),
+                    action: command => term.write("shell: insufficient rights"),
+                },
+                {
+                    test: command => command === "pwd",
+                    action: command => term.write("~/"),
+                },
+                {
+                    test: command => command === "ls",
+                    action: command => {
+                        term.write("cv.txt\r\nhire");
+                    },
+                },
+                {
+                    test: command => command === "ls -l",
+                    action: command => {
+                        const today = new Date();
+                        const monthNames = [
+                            "January",
+                            "February",
+                            "March",
+                            "April",
+                            "May",
+                            "June",
+                            "July",
+                            "August",
+                            "September",
+                            "October",
+                            "November",
+                            "December",
+                        ];
+                        const month = monthNames[today.getMonth()].substring(0,3);
+                        term.write(
+                            `-r--r--r--@  1 root  staff       128 ${month}  ${today.getDay()}  ${today.getFullYear()} cv.txt\r\n`
+                        );
+                        term.write(
+                            `-r-xr-xr-x@  1 root  staff       435 ${month}  ${today.getDay()}  ${today.getFullYear()} hire\r\n`
+                        );
+                    },
+                },
+                {
+                    test: command => command === "whoami",
+                    action: command => term.write("iaml"),
+                },
+                {
+                    test: command => command.startsWith("uname"),
+                    action: command =>
+                        term.write("A bunch of if statements 0.0.1"),
+                },
+                {
+                    test: command => command === "./hire",
+                    action: command => (location = "mailto:work@iamlocalho.st"),
+                },
+                {
+                    test: command => command.startsWith("cat"),
+                    action: command => {
+                        if (command.startsWith("cat cv")) showCV()
+                        else if (command.startsWith("cat hire")) term.write("mailto:work@iamlocalho.st")
+                        else term.write(`file "${command.substring(4)}" not found`);
+                    },
+                },
+                {
+                    test: command => command === "v86",
+                    action: command => runv86(),
+                },
+                {
+                    test: command => true,
+                    action: command =>
+                        error.next(command)
+                },
+            ];
+            const showCV = () => {
+                term.writeln("Hi! My name is Ed Telezhnikov and I'm a frontend developer.");
+                term.writeln("I studied @ ITMO and LUT, worked @ QIWI, Noveo, Proton and Finery Tech");
+                term.writeln("I prefer working with react/redux/saga/styled-components.");
+                term.writeln("You can find the full cv here https://iamlocalho.st/work/resume.pdf");
+            }
+            const runError = function* () {
+                for (let i = 0; i !== 5; i++) {
+                    term.write(`shell: ${yield}: command not found`);
+                }
+                yield; term.write("This is not an actual terminal, you know.");
+                yield; term.write("Just write 'cat cv.txt', trust me.");
+                yield; term.write("...");
+                yield; term.write("Fine, have it your way.");
+                setTimeout(() => runv86(), 1500);
+            }
+            const error = runError();
+            error.next();
+            const run = command => {
+                for (let { test, action } of rules) {
+                    if (test(command)) {
+                        action(command);
+                        break;
+                    }
+                }
+            };
+            const runv86 = () =>
+                new V86Starter({
+                    memory_size: 32 * 1024 * 1024,
+                    vga_memory_size: 2 * 1024 * 1024,
+                    screen_container: document.querySelector("body"),
+                    bios: {
+                        url: "/v86/seabios.bin",
+                    },
+                    vga_bios: {
+                        url: "/v86/vgabios.bin",
+                    },
+                    cdrom: {
+                        url: "/v86/linux3.iso",
+                    },
+                    autostart: true,
+                });
+
+            term.on("key", handleKey);
+            term.write("> ");
+            term.focus();
+        </script>
+    </body>
+</html>
